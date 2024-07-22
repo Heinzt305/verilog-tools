@@ -20,9 +20,15 @@ def decoder(
 
     mode : {'onehot', 'bitmask'}
         'onehot' is used to generate general decoder, output one-hot code,
-        such as 3-8 decoder. 'bitmask' is used to generate the output mask
-        decoder, the output mask is defaulted to high 0 and low 1, and
-        the mask can also be flipped by `reverse`.
+        such as 3-8 decoder.
+
+        example : `010->00000100`
+
+        'bitmask' is used to generate the output mask decoder, the output
+        mask is defaulted to high 0 and low 1, and the mask can also be
+        flipped by `reverse`.
+        
+        example(`reverse=False`) : `010->00000111`
     
     sigIn : string
         The Decoder's input signal name, also known as the selector signal.
