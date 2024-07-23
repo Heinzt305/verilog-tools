@@ -1,1 +1,1 @@
-from .rptreader import NewPandas
+from .edareport import EdaReport

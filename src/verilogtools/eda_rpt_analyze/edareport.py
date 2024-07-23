@@ -7,23 +7,21 @@ import re
 
 class EdaReport():
     def __init__(self, rptPath: Optional[str]) -> None:
-        self.lines = None
+        self.data = None
         if rptPath is None:
             pass
         else:
             self.loadRpt(rptPath)
 
-    def loadRpt(self, rptPath: str) -> list[str]: 
-        self.lines = self.readRpt(rptPath)
-        for line in self.lines:
-            tokens = line.strip().split()
+    def loadRpt(self, rptPath: str) -> dict:
+        self.data = self.getReportAttributes(self.readRpt(rptPath))
 
     def readRpt(self, rptPath: str) -> list[str]:
         with open(rptPath, 'r') as f:
             lines = f.readlines()
         return lines
     
-    def getReportAttributes(self, lines: list[str]):
+    def getReportAttributes(self, lines: list[str]) -> dict:
         lst = (
             'Report',
             'Design',
@@ -31,6 +29,7 @@ class EdaReport():
             'Date',
             'Dataframe',
         )
+        idx = 0
 
         report = dict.fromkeys(lst)
         attri = iter(lst)
@@ -39,11 +38,11 @@ class EdaReport():
         datalines = False
         df = pd.DataFrame()
         for line in lines:
-            tokens = re.sub(r'\(.*?\)|\:' ,"" ,line.strip()).split()
-
+            tokens = re.sub(r'\(|\)|\:' ,"" ,line.strip()).split()
+            
             if target == 'end':
                 break
-            elif tokens is [] or tokens is None:
+            elif tokens == [] or tokens is None:
                 continue
             elif target == 'Dataframe' and tokens[0] == report['Design']:
                 datalines = True
@@ -61,17 +60,27 @@ class EdaReport():
                     }
                 else:
                     report[target] = tokens[1]
-                target == next(attri, 'Dataframe')
+                target = next(attri, 'end')
             elif datalines is True:
-                columns = [re.sub(r'.*?/' ,"" , tokens[0])]
                 if report['Report'] == 'area':
                     index = ["Module_name", "Area(um2)"]
+                    columns = [tokens[6]]
                     df = pd.concat([df, pd.DataFrame([tokens[0], eval(tokens[1])], index=index, columns=columns)], axis=1)
                 elif report['Report'] == 'power':
                     index = ["Module_name", "Power(mW)"]
-                    df = pd.concat([df, pd.DataFrame([tokens[0], eval(tokens[4])], index=index, columns=columns)], axis=1)
+                    if len(tokens) == 6:
+                        columns = [tokens[0]]
+                        df = pd.concat([df, pd.DataFrame([tokens[0], eval(tokens[4])], index=index, columns=columns)], axis=1)
+                    else:
+                        columns = [tokens[1]]
+                        df = pd.concat([df, pd.DataFrame([tokens[0], eval(tokens[5])], index=index, columns=columns)], axis=1)
                 else:
                     index = ["Module_name"]
+                    columns = [tokens[0]]
                     df = pd.concat([df, pd.DataFrame([tokens[0]], index=index, columns=columns)], axis=1)
 
         report['Dataframe'] = df
+        return report
+    
+    def concatReport(self, rpt2: "EdaReport") -> pd.DataFrame:
+        pass
