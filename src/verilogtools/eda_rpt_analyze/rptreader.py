@@ -1,28 +1,77 @@
+from typing import (
+    Optional,
+    Literal,
+)
 import pandas as pd
 import re
 
-def ReadRpt(RptPath:str) -> list[str]:
-    with open(RptPath, 'r') as f:
-        lines = f.readlines()
-    return lines
+class EdaReport():
+    def __init__(self, rptPath: Optional[str]) -> None:
+        self.lines = None
+        if rptPath is None:
+            pass
+        else:
+            self.loadRpt(rptPath)
 
-def InfoChoose(line:str, mode:str) -> list[str]:
-    token = re.sub(r'\(.*?\)' ,"" ,line).strip().split()
-    if mode == 'area':
-        return [token[0], eval(token[1])]
-    elif mode == 'power':
-        return [token[0], eval(token[4])]
+    def loadRpt(self, rptPath: str) -> list[str]: 
+        self.lines = self.readRpt(rptPath)
+        for line in self.lines:
+            tokens = line.strip().split()
+
+    def readRpt(self, rptPath: str) -> list[str]:
+        with open(rptPath, 'r') as f:
+            lines = f.readlines()
+        return lines
     
-def NewPandas(RptPath:str, mode:str, start:int, end:int) -> pd.DataFrame:
-    df = pd.DataFrame()
-    lines = ReadRpt(RptPath)
-    if mode == 'area':
-        index = ["Module_name", "Area(um2)"]
-    elif mode == 'power':
-        index = ["Module_name", "Power(mW)"]
-    for idx, line in enumerate(lines):
-        if idx < end and idx >= start - 1:
-            token = InfoChoose(line, mode)
-            columns = [re.sub(r'.*?/' ,"" , token[0])]
-            df = pd.concat([df, pd.DataFrame(token, index=index, columns=columns)], axis=1)
-    return df
+    def getReportAttributes(self, lines: list[str]):
+        lst = (
+            'Report',
+            'Design',
+            'Version',
+            'Date',
+            'Dataframe',
+        )
+
+        report = dict.fromkeys(lst)
+        attri = iter(lst)
+
+        target = next(attri, 'end')
+        datalines = False
+        df = pd.DataFrame()
+        for line in lines:
+            tokens = re.sub(r'\(.*?\)|\:' ,"" ,line.strip()).split()
+
+            if target == 'end':
+                break
+            elif tokens is [] or tokens is None:
+                continue
+            elif target == 'Dataframe' and tokens[0] == report['Design']:
+                datalines = True
+            elif target == 'Dataframe' and (tokens[0][0] == '1' or tokens[0][0] == '-'):
+                datalines = False
+
+            if tokens[0] == target:
+                if target == 'Date':
+                    report[target] = {
+                        'week': tokens[1],
+                        'month': tokens[2],
+                        'day': tokens[3],
+                        'time': tokens[4],
+                        'year': tokens[5]
+                    }
+                else:
+                    report[target] = tokens[1]
+                target == next(attri, 'Dataframe')
+            elif datalines is True:
+                columns = [re.sub(r'.*?/' ,"" , tokens[0])]
+                if report['Report'] == 'area':
+                    index = ["Module_name", "Area(um2)"]
+                    df = pd.concat([df, pd.DataFrame([tokens[0], eval(tokens[1])], index=index, columns=columns)], axis=1)
+                elif report['Report'] == 'power':
+                    index = ["Module_name", "Power(mW)"]
+                    df = pd.concat([df, pd.DataFrame([tokens[0], eval(tokens[4])], index=index, columns=columns)], axis=1)
+                else:
+                    index = ["Module_name"]
+                    df = pd.concat([df, pd.DataFrame([tokens[0]], index=index, columns=columns)], axis=1)
+
+        report['Dataframe'] = df
