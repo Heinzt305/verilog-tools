@@ -6,12 +6,8 @@ import pandas as pd
 import torch
 
 def main():
-    lst = ["a", "b", "c"]
-    i = iter(lst)
-    print(next(i))
-    print(next(i))
-    print(next(i))
-    print(next(i, 'end'))
+    dic = 'as'
+    print(dic[0])
     exit()
 
     verilogtools.classic_rtl_export.decoder(
